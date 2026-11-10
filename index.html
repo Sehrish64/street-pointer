@@ -3,12 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" href="data:,">
 <title>Street Pointer — Finger Gun Duel</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root { --barH:0px; }
+  body.touch { --barH:148px; }
   html,body { background:#07040c; height:100%; overflow:hidden; font-family:'Segoe UI', Arial, sans-serif; }
   body { display:flex; align-items:center; justify-content:center; }
-  #wrap { position:relative; width:min(100vw, 177.78vh); aspect-ratio:16/9; box-shadow:0 0 80px rgba(255,60,60,.25); }
+  #stage { display:flex; flex-direction:column; align-items:stretch; width:min(100vw, calc((100vh - var(--barH)) * 1.77778)); width:min(100vw, calc((100dvh - var(--barH)) * 1.77778)); }
+  #wrap { position:relative; width:100%; aspect-ratio:16/9; box-shadow:0 0 80px rgba(255,60,60,.25); flex:none; }
+  #controlBar { display:none; width:100%; flex:none; background:linear-gradient(180deg,#1b0d30,#0a0516);
+    border-top:2px solid rgba(255,255,255,.16); padding:8px 12px; touch-action:none;
+    align-items:center; justify-content:space-between; gap:12px; }
+  body.touch #controlBar { display:flex; }
   canvas { width:100%; height:100%; display:block; background:#1a0b26; }
   .overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; z-index:5; }
   .hidden { display:none !important; }
@@ -33,26 +41,48 @@
   .controlsCard .k { display:inline-block; background:#fff; color:#111; border-radius:5px; padding:0 8px; margin:0 2px;
     font-weight:800; font-size:.86em; box-shadow:0 2px 0 #999; }
   .controlsCard .p1 { color:#ff8a7a; font-weight:800; } .controlsCard .p2 { color:#8dbcff; font-weight:800; }
+  body.touch .controlsCard { display:none; } /* keyboard hints are meaningless on touch devices */
   #koScreen { background:radial-gradient(ellipse at 50% 40%, rgba(30,0,10,.18), rgba(5,0,10,.62) 78%); justify-content:flex-start; padding-top:6%; }
   #koBig { font-family:Impact,'Arial Black',sans-serif; font-size:min(15vw,170px); color:#ffe259; letter-spacing:4px;
     text-shadow:0 6px 0 #c1270b, 0 14px 34px rgba(0,0,0,.75); transform:rotate(-3deg); }
   #koWinner { color:#fff; font-family:Impact,'Arial Black',sans-serif; font-size:min(5vw,52px); letter-spacing:2px; margin-top:6px; text-shadow:0 3px 0 #000, 0 0 24px rgba(255,210,80,.8); }
   #againBtn { margin-top:22px; background:linear-gradient(180deg,#ffb347,#ff512f); box-shadow:0 5px 0 #8f1d05; font-size:min(3vw,26px); padding:14px 36px; }
   #muteBtn { position:absolute; top:10px; right:12px; z-index:9; padding:8px 14px; font-size:16px; border-radius:10px; }
-  .touchCluster { position:absolute; bottom:2.5%; z-index:6; display:none; gap:10px; align-items:flex-end; }
-  .touchCluster.left { left:2%; } .touchCluster.right { right:2%; }
-  body.touch .touchCluster { display:flex; }
-  body.touch.oneP .touchCluster.right { display:none; }
-  .tbtn { width:60px; height:60px; border-radius:50%; border:2px solid rgba(255,255,255,.35); background:rgba(15,10,30,.55);
+  .touchCluster { display:flex; gap:12px; align-items:center; }
+  #touchP1 { margin-right:auto; }
+  #touchP2 { margin-left:auto; }
+  body.oneP #touchP1 { flex:1 1 auto; justify-content:space-between; margin-right:0; }
+  body.oneP #touchP2 { display:none; }
+  .tbtn { width:60px; height:60px; flex:none; border-radius:50%; border:2px solid rgba(255,255,255,.35); background:rgba(15,10,30,.55);
     color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; user-select:none; touch-action:none; padding:0;
     font-family:Arial,sans-serif; box-shadow:none; }
   .tbtn.shoot { width:72px; height:72px; font-size:30px; background:rgba(200,30,40,.55); }
   .tbtn.on { background:rgba(255,200,60,.75); }
-  .tcol { display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .tcol { display:flex; flex-direction:column; gap:10px; align-items:center; flex:none; }
   .trow { display:flex; gap:10px; }
+  /* Compact bar on phone-sized screens so both 2P clusters fit the bar width */
+  @media (max-width:560px), (max-height:500px) {
+    body.touch { --barH:124px; }
+    #controlBar { padding:6px; gap:6px; }
+    .touchCluster { gap:6px; }
+    .tcol, .trow { gap:6px; }
+    .tbtn { width:52px; height:52px; font-size:21px; }
+    .tbtn.shoot { width:60px; height:60px; font-size:25px; }
+    /* shrink title-screen content so it fits the shorter phone canvas */
+    .gameTitle { font-size:10.2vmin; line-height:.86; }
+    .tagline { font-size:12px; letter-spacing:3px; margin:6px 0 2px; }
+    .vsline { font-size:17px; margin-bottom:8px; }
+    .btnRow { margin:4px 0; }
+    .btnRow button { padding:8px 18px; font-size:16px; }
+    #startBtn { padding:9px 30px; font-size:19px; }
+    #koBig { font-size:16vmin; }
+    #koWinner { font-size:6vmin; }
+    #againBtn { padding:11px 28px; font-size:18px; margin-top:14px; }
+  }
 </style>
 </head>
 <body>
+<div id="stage">
 <div id="wrap">
   <canvas id="game" width="1280" height="720"></canvas>
   <button id="muteBtn" title="Mute / unmute">🔊</button>
@@ -79,7 +109,10 @@
     <button id="againBtn">↻ PLAY AGAIN</button>
   </div>
 
-  <div class="touchCluster left" id="touchP1">
+</div>
+
+<div id="controlBar">
+  <div class="touchCluster" id="touchP1">
     <div class="tcol">
       <div class="tbtn" data-p="0" data-k="jump">▲</div>
       <div class="trow">
@@ -89,7 +122,7 @@
     </div>
     <div class="tbtn shoot" data-p="0" data-k="shoot">👉</div>
   </div>
-  <div class="touchCluster right" id="touchP2">
+  <div class="touchCluster" id="touchP2">
     <div class="tbtn shoot" data-p="1" data-k="shoot">👈</div>
     <div class="tcol">
       <div class="tbtn" data-p="1" data-k="jump">▲</div>
@@ -99,6 +132,7 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <script>
